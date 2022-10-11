@@ -53,9 +53,28 @@ int main(void)
   
   /* Configure the System clock to have a frequency of 180 MHz */
   SystemClock_Config();
+  LED1_GPIO_CLK_ENABLE();
+  LED2_GPIO_CLK_ENABLE();
+  LED3_GPIO_CLK_ENABLE();
+  LED4_GPIO_CLK_ENABLE();
+  BSP_LED_Init(LED1);
+  BSP_LED_Init(LED2);
+  BSP_LED_Init(LED3);
+  BSP_LED_Init(LED4);
+  for (int i = 0; i < 5; ++i)
+  {
+    HAL_Delay(100);
+    BSP_LED_Toggle(LED1);
+    HAL_Delay(100);
+    BSP_LED_Toggle(LED2);
+    HAL_Delay(100);
+    BSP_LED_Toggle(LED3);
+    HAL_Delay(100);
+    BSP_LED_Toggle(LED4);
+  }
   
   lcd_init();
-  BSP_LCD_DisplayStringAt(0, 200, (uint8_t *)"Verifying firmware", CENTER_MODE);
+  BSP_LCD_DisplayStringAt(0, 200, (uint8_t *)"Testing display...", CENTER_MODE);
 
   int progress = 0;
   show_progress(progress);
