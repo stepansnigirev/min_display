@@ -338,8 +338,13 @@ void     BSP_LCD_SetFont(sFONT *fonts);
 sFONT    *BSP_LCD_GetFont(void);
 
 uint32_t BSP_LCD_ReadPixel(uint16_t Xpos, uint16_t Ypos);
+
 void     BSP_LCD_DrawPixel(uint16_t Xpos, uint16_t Ypos, uint32_t pixel);
+void     BSP_LCD_DrawPixelScreen(uint16_t Xpos, uint16_t Ypos, uint32_t pixel, int relative);
+
 void     BSP_LCD_Clear(uint32_t Color);
+void     BSP_LCD_ClearScreen(uint32_t Color, int relative);
+
 void     BSP_LCD_ClearStringLine(uint32_t Line);
 void     BSP_LCD_DisplayStringAtLine(uint16_t Line, uint8_t *ptr);
 void     BSP_LCD_DisplayStringAt(uint16_t Xpos, uint16_t Ypos, uint8_t *Text, Text_AlignModeTypdef Mode);
@@ -355,12 +360,17 @@ void     BSP_LCD_DrawEllipse(int Xpos, int Ypos, int XRadius, int YRadius);
 void     BSP_LCD_DrawBitmap(uint32_t Xpos, uint32_t Ypos, uint8_t *pbmp);
 
 void     BSP_LCD_FillRect(uint16_t Xpos, uint16_t Ypos, uint16_t Width, uint16_t Height);
+void     BSP_LCD_FillRectScreen(uint16_t Xpos, uint16_t Ypos, uint16_t Width, uint16_t Height, uint32_t color, int next);
 void     BSP_LCD_FillCircle(uint16_t Xpos, uint16_t Ypos, uint16_t Radius);
 void     BSP_LCD_FillPolygon(pPoint Points, uint16_t PointCount);
 void     BSP_LCD_FillEllipse(int Xpos, int Ypos, int XRadius, int YRadius);
 
 void     BSP_LCD_DisplayOff(void);
 void     BSP_LCD_DisplayOn(void);
+
+uint8_t  BSP_LCD_DrawBitmapRaw(uint32_t Xpos, uint32_t Ypos, uint32_t Width, uint32_t Height, 
+                               uint32_t ColorBits, const void *pPixelData);
+void LL_ConvertLineToARGB8888(void * pSrc, void *pDst, uint32_t xSize, uint32_t ColorMode);
 
 /**
   * @}

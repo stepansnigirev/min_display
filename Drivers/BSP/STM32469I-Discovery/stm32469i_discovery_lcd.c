@@ -165,7 +165,6 @@ static LCD_DrawPropTypeDef DrawProp[LTDC_MAX_LAYER_NUMBER];
 static void DrawChar(uint16_t Xpos, uint16_t Ypos, const uint8_t *c);
 static void FillTriangle(uint16_t x1, uint16_t x2, uint16_t x3, uint16_t y1, uint16_t y2, uint16_t y3);
 static void LL_FillBuffer(uint32_t LayerIndex, void *pDst, uint32_t xSize, uint32_t ySize, uint32_t OffLine, uint32_t ColorIndex);
-static void LL_ConvertLineToARGB8888(void * pSrc, void *pDst, uint32_t xSize, uint32_t ColorMode);
 /**
   * @}
   */
@@ -696,6 +695,12 @@ void BSP_LCD_Clear(uint32_t Color)
   LL_FillBuffer(ActiveLayer, (uint32_t *)(hltdc_eval.LayerCfg[ActiveLayer].FBStartAdress), BSP_LCD_GetXSize(), BSP_LCD_GetYSize(), 0, Color);
 }
 
+void BSP_LCD_ClearScreen(uint32_t Color, int relative)
+{
+  /* Clear the LCD */
+  LL_FillBuffer(ActiveLayer, (uint32_t *)(hltdc_eval.LayerCfg[ActiveLayer].FBStartAdress + 4*480*800*relative), BSP_LCD_GetXSize(), BSP_LCD_GetYSize(), 0, Color);
+}
+
 /**
   * @brief  Clears the selected line in currently active layer.
   * @param  Line: Line to be cleared
@@ -1034,6 +1039,57 @@ void BSP_LCD_DrawEllipse(int Xpos, int Ypos, int XRadius, int YRadius)
   while (y <= 0);
 }
 
+uint8_t BSP_LCD_DrawBitmapRaw(uint32_t Xpos, uint32_t Ypos, uint32_t Width, uint32_t Height, 
+                              uint32_t ColorBits, const void *pPixelData)
+{
+  uint32_t Address;
+  uint32_t InputColorMode = 0;
+  const uint8_t *src_buf = (const uint8_t*)pPixelData;
+  uint32_t src_increment = Width * (ColorBits >> 3);
+  uint32_t dst_increment = BSP_LCD_GetXSize() * 4;
+
+  /* Validate parameters */
+  if( !Width || !Height || !ColorBits || !pPixelData ||
+      Xpos + Width > BSP_LCD_GetXSize() || Ypos + Height > BSP_LCD_GetYSize() ) 
+  {
+    return LCD_ERROR;
+  }
+
+  /* Set the address */
+  Address = hltdc_eval.LayerCfg[ActiveLayer].FBStartAdress + (((BSP_LCD_GetXSize()*Ypos) + Xpos)*(4));
+
+  /* Get the layer pixel format and check buffer alignment*/
+  if (ColorBits == 32)
+  {
+    InputColorMode = CM_ARGB8888;
+    if((uint32_t)pPixelData & 0x3) return LCD_ERROR;
+  }
+  else if (ColorBits == 16)
+  {
+    InputColorMode = CM_RGB565;
+    if((uint32_t)pPixelData & 0x1) return LCD_ERROR;
+  }
+  else if (ColorBits == 24)
+  {
+    InputColorMode = CM_RGB888;
+    if((uint32_t)pPixelData & 0x3) return LCD_ERROR;
+  }
+  else return LCD_ERROR;
+
+  /* Convert picture to ARGB8888 pixel format */
+  while(Height--)
+  {
+    /* Pixel format conversion */
+    LL_ConvertLineToARGB8888((uint32_t *)src_buf, (uint32_t *)Address, Width, InputColorMode);
+
+    /* Increment the source and destination buffers */
+    Address += dst_increment;
+    src_buf += src_increment;
+  }
+
+  return LCD_OK;
+}
+
 /**
   * @brief  Draws a bitmap picture loaded in the internal Flash (32 bpp) in currently active layer.
   * @param  Xpos: Bmp X position in the LCD
@@ -1109,6 +1165,20 @@ void BSP_LCD_FillRect(uint16_t Xpos, uint16_t Ypos, uint16_t Width, uint16_t Hei
 
   /* Fill the rectangle */
   LL_FillBuffer(ActiveLayer, (uint32_t *)Xaddress, Width, Height, (BSP_LCD_GetXSize() - Width), DrawProp[ActiveLayer].TextColor);
+}
+
+void BSP_LCD_FillRectScreen(uint16_t Xpos, uint16_t Ypos, uint16_t Width, uint16_t Height, uint32_t color, int relative)
+{
+  uint32_t  Xaddress = 0;
+
+  /* Set the text color */
+  BSP_LCD_SetTextColor(DrawProp[ActiveLayer].TextColor);
+
+  /* Get the rectangle start address */
+  Xaddress = (hltdc_eval.LayerCfg[ActiveLayer].FBStartAdress+4*480*800*relative) + 4*(BSP_LCD_GetXSize()*Ypos + Xpos);
+
+  /* Fill the rectangle */
+  LL_FillBuffer(ActiveLayer, (uint32_t *)Xaddress, Width, Height, (BSP_LCD_GetXSize() - Width), color);
 }
 
 /**
@@ -1426,6 +1496,12 @@ void BSP_LCD_DrawPixel(uint16_t Xpos, uint16_t Ypos, uint32_t RGB_Code)
   *(__IO uint32_t*) (hltdc_eval.LayerCfg[ActiveLayer].FBStartAdress + (4*(Ypos*BSP_LCD_GetXSize() + Xpos))) = RGB_Code;
 }
 
+void BSP_LCD_DrawPixelScreen(uint16_t Xpos, uint16_t Ypos, uint32_t RGB_Code, int relative)
+{
+  /* Write data value to all SDRAM memory */
+  *(__IO uint32_t*) (hltdc_eval.LayerCfg[ActiveLayer].FBStartAdress + 4*480*800*relative + (4*(Ypos*BSP_LCD_GetXSize() + Xpos))) = RGB_Code;
+}
+
 
 /**
   * @brief  Draws a character on LCD.
@@ -1598,7 +1674,7 @@ static void LL_FillBuffer(uint32_t LayerIndex, void *pDst, uint32_t xSize, uint3
   * @param  xSize: Buffer width
   * @param  ColorMode: Input color mode
   */
-static void LL_ConvertLineToARGB8888(void *pSrc, void *pDst, uint32_t xSize, uint32_t ColorMode)
+void LL_ConvertLineToARGB8888(void *pSrc, void *pDst, uint32_t xSize, uint32_t ColorMode)
 {
   /* Configure the DMA2D Mode, Color Mode and output offset */
   hdma2d_eval.Init.Mode         = DMA2D_M2M_PFC;

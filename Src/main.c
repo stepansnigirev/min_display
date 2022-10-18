@@ -6,11 +6,15 @@
 #include "stm32469i_discovery_lcd.h"
 #include "y1.h"
 #include <math.h>
+#include <stdlib.h>
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 #define BLACK           0xFF000000
 #define BLUE            0xFF5267FF
+#define ORANGE          0xFFFF8F1F
+#define RED             0xFFFF1F53
+#define WHITE           0xFFAFBFFF
 #define PROGRESS_WIDTH  380
 #define PROGRESS_Y      250
 #define LCD_WIDTH       480
@@ -20,6 +24,11 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 
+#define LCD_FB2_START_ADDRESS ((uint32_t)0xC0200000)
+#define LCD_FB_LEN ((uint32_t)1536000) // 480x800x4
+// static uint32_t next_addr = ((uint32_t)LCD_FB_START_ADDRESS);
+static int next = 1;
+
 /* Private functions ---------------------------------------------------------*/
 static void lcd_init(){
   BSP_LCD_Init();
@@ -28,7 +37,7 @@ static void lcd_init(){
   BSP_LCD_SelectLayer(LTDC_ACTIVE_LAYER_BACKGROUND);
   BSP_LCD_Clear(BLACK);
   BSP_LCD_SetBackColor(BLACK);
-  BSP_LCD_SetTextColor(BLUE);
+  BSP_LCD_SetTextColor(BLACK);
 }
 
 static point_t normalize(point_t vec){
@@ -51,34 +60,90 @@ static point_t vec_cross(point_t a, point_t b){
   return v;
 }
 
-#define SCALE 500
+#define SCALE 200
 #define PI 3.14159265358979
 
-static void draw_sphere(float vertical){
-  point_t vec = {100*sin(2*vertical*PI/100), 100*cos(2*vertical*PI/100), 100*sin(2*vertical*PI/100)};
-  vec = normalize(vec);
-  point_t az = {0,0,1};
-  point_t vx = vec_cross(vec, az);
-  point_t vy = vec_cross(vec, vx);
-
-  BSP_LCD_Clear(BLACK);
-  // BSP_LCD_SetTextColor(BLACK);
-  // BSP_LCD_FillRect(0, 400, 400, 400);
-  float x,y;
-  for (int i = 0; i < sizeof(sph_harm1)/sizeof(point_t); i++){
-    point_t p = sph_harm1[i];
-    x = vec_dot(vx, p);
-    y = vec_dot(vy, p); 
-    // float z = vec_dot(p, vec)
-    x = x*SCALE+400;
-    y = y*SCALE+480/2;
-    if(x>0 && y>0){
-      BSP_LCD_DrawPixel((uint16_t)y, (uint16_t)x, BLUE);
-    }
-  }
+static void blob(uint16_t x, uint16_t y, int next, uint32_t color){
+  // BSP_LCD_FillRectScreen(y-1,x-1,3,3,BLUE,next);
+  BSP_LCD_DrawPixelScreen(y, x, color, next);
+  // BSP_LCD_DrawPixelScreen(y+1, x+1, WHITE, next);
+  // BSP_LCD_DrawPixelScreen(y+1, x-1, BLUE, next);
+  // BSP_LCD_DrawPixelScreen(y-1, x+1, BLUE, next);
+  // BSP_LCD_DrawPixelScreen(y-1, x-1, BLUE, next);
 }
 
-static void show_progress(int progress){
+static void draw_sphere(float vertical){
+  point_t vec = {0, 100*sin(vertical*PI/101), 100*cos(vertical*PI/101)};
+  vec = normalize(vec);
+  point_t az = {0,0,1};
+  point_t vx = normalize(vec_cross(vec, az));
+  point_t vy = normalize(vec_cross(vec, vx));
+
+  BSP_LCD_ClearScreen(BLACK, next);
+  float x1,y,x2;
+  point_t p;
+
+  // sph0
+  float opa = ((vec.z*vec.z)*(vec.x*vec.x+vec.y*vec.y)*4);
+  uint32_t opa_mask = (uint32_t)(sqrt(opa)*255);
+  opa_mask = (opa_mask << 24) | 0xFFFFFF;
+  for (int i = 0; i < sizeof(sph_harm0)/sizeof(point_t); i++){
+    p = sph_harm0[i];
+    x1 = vec_dot(vx, p);
+    y = vec_dot(vy, p);
+    // float z = vec_dot(p, vec)
+    x1 = x1*SCALE+400;
+    y = y*SCALE+480/2;
+    if(x1>0 && y>0){
+      blob(x1,y,next,ORANGE & opa_mask);
+    }
+  }
+
+  // sph1
+  opa = (3*(vec.z*vec.z)-1)/2;
+  opa_mask = (uint32_t)(sqrt(opa*opa)*255);
+  opa_mask = (opa_mask << 24) | 0xFFFFFF;
+  for (int i = 0; i < sizeof(sph_harm1)/sizeof(point_t); i++){
+    p = sph_harm1[i];
+    x1 = vec_dot(vx, p);
+    y = vec_dot(vy, p);
+    // float z = vec_dot(p, vec)
+    x2 = x1*SCALE+800*2/6;
+    x1 = x1*SCALE+800*4/6;
+    y = y*SCALE+480/2;
+    if(x2>0 && y>0 && y<480){
+      blob(x1,y,next,BLUE & opa_mask);
+      blob(x2,y,next,BLUE & opa_mask);
+    }
+  }
+
+  // sph2
+  opa = (vec.x*vec.x+vec.y*vec.y);
+  opa_mask = (uint32_t)(opa*255);
+  opa_mask = (opa_mask << 24) | 0xFFFFFF;
+  for (int i = 0; i < sizeof(sph_harm2)/sizeof(point_t); i++){
+    p = sph_harm2[i];
+    x1 = vec_dot(vx, p);
+    y = vec_dot(vy, p);
+    // float z = vec_dot(p, vec)
+    x2 = x1*SCALE+800/7;
+    x1 = x1*SCALE+800*6/7;
+    y = y*SCALE+480/2;
+    if(x2>0 && y>0 && y<480){
+      blob(x1,y,next,RED & opa_mask);
+      blob(x2,y,next,RED & opa_mask);
+    }
+  }
+
+  if(next > 0){
+    BSP_LCD_SetLayerAddress(LTDC_ACTIVE_LAYER_BACKGROUND, LCD_FB_START_ADDRESS+(4*480*800));
+  }else{
+    BSP_LCD_SetLayerAddress(LTDC_ACTIVE_LAYER_BACKGROUND, LCD_FB_START_ADDRESS);
+  }
+  next = -next;
+}
+
+static void show_progress(uint32_t progress){
   // uint16_t x0 = (LCD_WIDTH-PROGRESS_WIDTH)/2;
   // uint16_t active_width = progress*PROGRESS_WIDTH/100;
   // uint16_t inactive_width = PROGRESS_WIDTH-active_width;
@@ -88,6 +153,8 @@ static void show_progress(int progress){
   // BSP_LCD_SetTextColor(BLACK);
   // BSP_LCD_FillRect(x0+active_width, PROGRESS_Y, inactive_width, 20);
   // BSP_LCD_SetTextColor(BLUE);
+  // uint32_t x = (480*4*8*progress);
+  // BSP_LCD_SetLayerAddress(LTDC_ACTIVE_LAYER_BACKGROUND, LCD_FB_START_ADDRESS+x);
   draw_sphere(progress);
 }
 
@@ -124,16 +191,17 @@ int main(void)
   // }
   
   lcd_init();
-  BSP_LCD_DisplayStringAt(0, 200, (uint8_t *)"Testing display...", CENTER_MODE);
+  // BSP_LCD_DisplayStringAt(0, 200, (uint8_t *)"Testing display...", CENTER_MODE);
 
   draw_sphere(0);
+  // draw_sphere(20, 800);
 
   int progress = 0;
   show_progress(progress);
 
   while(1)
   {
-    HAL_Delay(30);
+    HAL_Delay(10);
     
     progress = (progress+1) % 100;
     show_progress(progress);
