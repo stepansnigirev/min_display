@@ -32,7 +32,7 @@ static int next = 1;
 /* Private functions ---------------------------------------------------------*/
 static void lcd_init(){
   BSP_LCD_Init();
-  BSP_LCD_InitEx(LCD_ORIENTATION_PORTRAIT);
+  BSP_LCD_InitEx(LCD_ORIENTATION_LANDSCAPE);
   BSP_LCD_LayerDefaultInit(LTDC_ACTIVE_LAYER_BACKGROUND, LCD_FB_START_ADDRESS);
   BSP_LCD_SelectLayer(LTDC_ACTIVE_LAYER_BACKGROUND);
   BSP_LCD_Clear(BLACK);
@@ -65,7 +65,7 @@ static point_t vec_cross(point_t a, point_t b){
 
 static void blob(uint16_t x, uint16_t y, int next, uint32_t color){
   // BSP_LCD_FillRectScreen(y-1,x-1,3,3,BLUE,next);
-  BSP_LCD_DrawPixelScreen(y, x, color, next);
+  BSP_LCD_DrawPixelScreen(x, y, color, next);
   // BSP_LCD_DrawPixelScreen(y+1, x+1, WHITE, next);
   // BSP_LCD_DrawPixelScreen(y+1, x-1, BLUE, next);
   // BSP_LCD_DrawPixelScreen(y-1, x+1, BLUE, next);
