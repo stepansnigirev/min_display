@@ -4,11 +4,13 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32469i_discovery_lcd.h"
+#include "stm32469i_discovery_ts.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 #define BLACK           0xFF000000
-#define BLUE            0xFF5267FF
+// #define BLUE            0xFF5267FF
+#define BLUE            0xFFFFFFFF
 #define PROGRESS_WIDTH  380
 #define PROGRESS_Y      250
 #define LCD_WIDTH       480
@@ -18,15 +20,24 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 
+TS_StateTypeDef point;
+
+static uint8_t tsid;
+
 /* Private functions ---------------------------------------------------------*/
-static void lcd_init(){
-  BSP_LCD_Init();
+static void lcd_ts_init(){
   BSP_LCD_InitEx(LCD_ORIENTATION_PORTRAIT);
+  // BSP_LCD_Init();
+  BSP_TS_Init(480, 800, &tsid);
   BSP_LCD_LayerDefaultInit(LTDC_ACTIVE_LAYER_BACKGROUND, LCD_FB_START_ADDRESS);
   BSP_LCD_SelectLayer(LTDC_ACTIVE_LAYER_BACKGROUND);
   BSP_LCD_Clear(BLACK);
   BSP_LCD_SetBackColor(BLACK);
   BSP_LCD_SetTextColor(BLUE);
+  char str[] = "A - Touchscreen ID";
+  str[0] = str[0]+tsid;
+  BSP_LCD_DisplayStringAt(0, 600, (uint8_t *)str, CENTER_MODE);
+
 }
 
 static void show_progress(int progress){
@@ -39,6 +50,18 @@ static void show_progress(int progress){
   BSP_LCD_SetTextColor(BLACK);
   BSP_LCD_FillRect(x0+active_width, PROGRESS_Y, inactive_width, 20);
   BSP_LCD_SetTextColor(BLUE);
+}
+
+static void show_ts(){
+  BSP_TS_GetState(&point);
+  BSP_LCD_SetTextColor(BLACK);
+  BSP_LCD_FillRect(0, 400, 480, 50);
+  BSP_LCD_SetTextColor(BLUE);
+  if(point.touchDetected){
+    BSP_LCD_DisplayStringAt(0, 400, (uint8_t *)"Touch detected!", CENTER_MODE);
+  }else{
+    BSP_LCD_DisplayStringAt(0, 400, (uint8_t *)"Untouched...", CENTER_MODE);
+  }
 }
 
 /**
@@ -57,10 +80,16 @@ int main(void)
   LED2_GPIO_CLK_ENABLE();
   LED3_GPIO_CLK_ENABLE();
   LED4_GPIO_CLK_ENABLE();
+  // DISCO_I2C1_CLK_ENABLE();
+  // DISCO_DMAx_CLK_ENABLE();
+  // DISCO_I2C1_SCL_SDA_GPIO_CLK_ENABLE();
+
   BSP_LED_Init(LED1);
   BSP_LED_Init(LED2);
   BSP_LED_Init(LED3);
   BSP_LED_Init(LED4);
+
+
   for (int i = 0; i < 5; ++i)
   {
     HAL_Delay(100);
@@ -73,9 +102,12 @@ int main(void)
     BSP_LED_Toggle(LED4);
   }
   
-  lcd_init();
-  BSP_LCD_DisplayStringAt(0, 200, (uint8_t *)"Testing display...", CENTER_MODE);
-
+  lcd_ts_init();
+#if defined (USE_STM32469I_DISCO_REVC)
+  BSP_LCD_DisplayStringAt(0, 200, (uint8_t *)"Testing new display...", CENTER_MODE);
+#else
+  BSP_LCD_DisplayStringAt(0, 200, (uint8_t *)"Testing old display...", CENTER_MODE);
+#endif
   int progress = 0;
   show_progress(progress);
 
@@ -85,6 +117,7 @@ int main(void)
     
     progress = (progress+1) % 100;
     show_progress(progress);
+    show_ts();
 
   }
 }

@@ -71,11 +71,15 @@ Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_sai_ex.c \
 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c \
 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c \
 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c \
+Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_i2c.c \
 Drivers/BSP/STM32469I-Discovery/stm32469i_discovery.c \
 Drivers/BSP/STM32469I-Discovery/stm32469i_discovery_lcd.c \
+Drivers/BSP/STM32469I-Discovery/stm32469i_discovery_ts.c \
 Drivers/BSP/STM32469I-Discovery/stm32469i_discovery_sdram.c \
 Drivers/BSP/STM32469I-Discovery/stm32469i_discovery_sd.c \
-Drivers/BSP/Components/otm8009a/otm8009a.c
+Drivers/BSP/Components/otm8009a/otm8009a.c \
+Drivers/BSP/Components/nt35510/nt35510.c \
+Drivers/BSP/Components/ft6x06/ft6x06.c
 
 # ASM sources
 ASM_SOURCES =  \
@@ -123,8 +127,8 @@ AS_DEFS =
 # C defines
 C_DEFS =  \
 -DUSE_HAL_DRIVER \
--DSTM32F469xx
-
+-DSTM32F469xx \
+-DUSE_STM32469I_DISCO_REVC
 
 # AS includes
 AS_INCLUDES = 
