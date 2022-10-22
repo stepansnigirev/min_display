@@ -294,7 +294,7 @@ void     BSP_LCD_LTDC_IRQHandler(void);
 void     BSP_LCD_LTDC_ER_IRQHandler(void);
 
 uint8_t  BSP_LCD_Init(void);
-uint8_t  BSP_LCD_InitEx(LCD_OrientationTypeDef orientation);
+uint8_t  BSP_LCD_InitEx(LCD_OrientationTypeDef orientation, uint8_t is_revc);
 
 void     BSP_LCD_MspDeInit(void);
 void     BSP_LCD_MspInit(void);
@@ -347,6 +347,7 @@ void     BSP_LCD_FillEllipse(int Xpos, int Ypos, int XRadius, int YRadius);
 void     BSP_LCD_DisplayOff(void);
 void     BSP_LCD_DisplayOn(void);
 
+uint32_t BSP_LCD_ReadDisplayModel(uint8_t * arr, uint16_t len);
 /**
   * @}
   */

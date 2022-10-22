@@ -5,6 +5,7 @@
 #include "main.h"
 #include "stm32469i_discovery_lcd.h"
 #include "stm32469i_discovery_ts.h"
+#include <stdio.h>
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -22,20 +23,20 @@ void SystemClock_Config(void);
 
 TS_StateTypeDef point;
 
-static uint8_t tsid;
-
 /* Private functions ---------------------------------------------------------*/
 static void lcd_ts_init(){
-  BSP_LCD_InitEx(LCD_ORIENTATION_PORTRAIT);
+  BSP_LCD_Init();
   // BSP_LCD_Init();
-  BSP_TS_Init(480, 800, &tsid);
+  BSP_TS_Init(480, 800);
   BSP_LCD_LayerDefaultInit(LTDC_ACTIVE_LAYER_BACKGROUND, LCD_FB_START_ADDRESS);
   BSP_LCD_SelectLayer(LTDC_ACTIVE_LAYER_BACKGROUND);
   BSP_LCD_Clear(BLACK);
   BSP_LCD_SetBackColor(BLACK);
   BSP_LCD_SetTextColor(BLUE);
-  char str[] = "A - Touchscreen ID";
-  str[0] = str[0]+tsid;
+  uint8_t buf[5] = {0};
+  BSP_LCD_ReadDisplayModel(buf, sizeof(buf));
+  char str[100];
+  sprintf(str, "Display ID: %d %d %d %d %d", buf[0], buf[1], buf[2], buf[3], buf[4]);
   BSP_LCD_DisplayStringAt(0, 600, (uint8_t *)str, CENTER_MODE);
 
 }

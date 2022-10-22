@@ -163,7 +163,16 @@ static void LL_ConvertLineToARGB8888(void * pSrc, void *pDst, uint32_t xSize, ui
   */
 uint8_t BSP_LCD_Init(void)
 {
-  return (BSP_LCD_InitEx(LCD_ORIENTATION_LANDSCAPE));
+  uint8_t status = BSP_LCD_InitEx(LCD_ORIENTATION_PORTRAIT, 0);
+  uint8_t arr[5];
+  // Read manufacturer information and reinit display if it's a new board.
+  // First two bytes - manifacturer ID (395 - ORISE), second two - display model (0x8009)
+  BSP_LCD_ReadDisplayModel(arr, sizeof(arr));
+  if(arr[0] == 1 && arr[1] == 139 && arr[2] == 128 && arr[3] == 9){
+    return status;
+  }else{
+    return BSP_LCD_InitEx(LCD_ORIENTATION_PORTRAIT, 1);
+  }
 }
 
 /**
@@ -175,7 +184,7 @@ uint8_t BSP_LCD_Init(void)
   *     - OTM8009A LCD Display IC Driver ititialization
   * @retval LCD state
   */
-uint8_t BSP_LCD_InitEx(LCD_OrientationTypeDef orientation)
+uint8_t BSP_LCD_InitEx(LCD_OrientationTypeDef orientation, uint8_t is_revc)
 {
   DSI_PLLInitTypeDef dsiPllInit;
   DSI_PHY_TimerTypeDef  PhyTimings;
@@ -250,21 +259,21 @@ uint8_t BSP_LCD_InitEx(LCD_OrientationTypeDef orientation)
   VACT = lcd_y_size;
   
   /* The following values are same for portrait and landscape orientations */
-#if defined (USE_STM32469I_DISCO_REVC)
-  VSA  = NT35510_480X800_VSYNC;
-  VBP  = NT35510_480X800_VBP;
-  VFP  = NT35510_480X800_VFP;
-  HSA  = NT35510_480X800_HSYNC;
-  HBP  = NT35510_480X800_HBP;
-  HFP  = NT35510_480X800_HFP;
-#else
-  VSA  = OTM8009A_480X800_VSYNC;
-  VBP  = OTM8009A_480X800_VBP;
-  VFP  = OTM8009A_480X800_VFP;
-  HSA  = OTM8009A_480X800_HSYNC;
-  HBP  = OTM8009A_480X800_HBP;
-  HFP  = OTM8009A_480X800_HFP;
-#endif /* USE_STM32469I_DISCO_REVC */
+  if(is_revc){
+    VSA  = NT35510_480X800_VSYNC;
+    VBP  = NT35510_480X800_VBP;
+    VFP  = NT35510_480X800_VFP;
+    HSA  = NT35510_480X800_HSYNC;
+    HBP  = NT35510_480X800_HBP;
+    HFP  = NT35510_480X800_HFP;
+  }else{
+    VSA  = OTM8009A_480X800_VSYNC;
+    VBP  = OTM8009A_480X800_VBP;
+    VFP  = OTM8009A_480X800_VFP;
+    HSA  = OTM8009A_480X800_HSYNC;
+    HBP  = OTM8009A_480X800_HBP;
+    HFP  = OTM8009A_480X800_HFP;
+  }
   
   
   hdsivideo_handle.VirtualChannelID = LCD_OTM8009A_ID;
@@ -371,23 +380,23 @@ uint8_t BSP_LCD_InitEx(LCD_OrientationTypeDef orientation)
   
 /************************End LTDC Initialization*******************************/
   
-#if defined(USE_STM32469I_DISCO_REVC)
-/***********************NT35510 Initialization********************************/  
+  if(is_revc){
+  /***********************NT35510 Initialization********************************/  
   
-  /* Initialize the NT35510 LCD Display IC Driver (TechShine LCD IC Driver)
-   * depending on configuration set in 'hdsivideo_handle'.
-   */
-  NT35510_Init(NT35510_FORMAT_RGB888, orientation);
-/***********************End NT35510 Initialization****************************/
-#else
-/***********************OTM8009A Initialization********************************/  
+    /* Initialize the NT35510 LCD Display IC Driver (TechShine LCD IC Driver)
+     * depending on configuration set in 'hdsivideo_handle'.
+     */
+    NT35510_Init(NT35510_FORMAT_RGB888, orientation);
+  /***********************End NT35510 Initialization****************************/
+  }else{
+  /***********************OTM8009A Initialization********************************/  
   
-  /* Initialize the OTM8009A LCD Display IC Driver (KoD LCD IC Driver)
-  *  depending on configuration set in 'hdsivideo_handle'.
-  */
-  OTM8009A_Init(OTM8009A_FORMAT_RGB888, orientation);
+    /* Initialize the OTM8009A LCD Display IC Driver (KoD LCD IC Driver)
+    *  depending on configuration set in 'hdsivideo_handle'.
+    */
+    OTM8009A_Init(OTM8009A_FORMAT_RGB888, orientation);
 /***********************End OTM8009A Initialization****************************/ 
-#endif /* USE_STM32469I_DISCO_REVC */
+  }
 
   return LCD_OK;
 }
@@ -1290,6 +1299,20 @@ void BSP_LCD_DisplayOff(void)
                      OTM8009A_CMD_DISPOFF,
                      0x00);
   
+}
+
+
+uint32_t BSP_LCD_ReadDisplayModel(uint8_t * arr, uint16_t len){
+  HAL_StatusTypeDef status = HAL_DSI_ConfigFlowControl(&(hdsi_eval), DSI_FLOW_CONTROL_BTA);
+  if (status != HAL_OK){
+    return LCD_ERROR;
+  }
+ 
+  status = HAL_DSI_Read(&(hdsi_eval), LCD_OTM8009A_ID, arr, len, DSI_GEN_SHORT_PKT_READ_P1, 0, (uint8_t[]){0xA1, 0});
+  if (status != HAL_OK){
+    return LCD_ERROR;
+  }
+  return LCD_OK;
 }
 
 /**

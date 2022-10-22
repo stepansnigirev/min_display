@@ -142,7 +142,7 @@ char * ts_gesture_id_string_tab[GEST_ID_NB_MAX] = { "None",
   * @param  ts_SizeY : Maximum Y size of the TS area on LCD
   * @retval TS_OK if all initializations are OK. Other value if error.
   */
-uint8_t BSP_TS_Init(uint16_t ts_SizeX, uint16_t ts_SizeY, uint8_t* tsid)
+uint8_t BSP_TS_Init(uint16_t ts_SizeX, uint16_t ts_SizeY)
 {
   uint8_t ts_status = TS_OK;
   uint8_t ts_id1, ts_id2 = 0;
@@ -168,11 +168,6 @@ uint8_t BSP_TS_Init(uint16_t ts_SizeX, uint16_t ts_SizeY, uint8_t* tsid)
   /* Verify this is a FT6206 or FT6336G, otherwise this is an error case */
   if((ts_id1 == FT6206_ID_VALUE) || (ts_id2 == FT6206_ID_VALUE) || (ts_id2 == FT6X36_ID2_VALUE))
   {
-    if(ts_id2 == FT6X36_ID2_VALUE){
-      *tsid = 2;
-    }else{
-      *tsid = 1;
-    }
     /* Found FT6206 : Initialize the TS driver structure */
     ts_driver = &ft6x06_ts_drv;
 
